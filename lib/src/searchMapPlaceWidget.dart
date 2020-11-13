@@ -24,6 +24,7 @@ class SearchMapPlaceWidget extends StatefulWidget {
     this.endHeight = 364,
     this.textStyle,
     this.hintStyle,
+    this.textEditingController,
   })  : assert((location == null && radius == null) ||
             (location != null && radius != null)),
         super(key: key);
@@ -101,13 +102,17 @@ class SearchMapPlaceWidget extends StatefulWidget {
   /// The hint style of search box
   final TextStyle hintStyle;
 
+  /// The TextEditingController of search box
+  final TextEditingController textEditingController;
+
   @override
   _SearchMapPlaceWidgetState createState() => _SearchMapPlaceWidgetState();
 }
 
 class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget>
     with TickerProviderStateMixin {
-  TextEditingController _textEditingController = TextEditingController();
+  TextEditingController get _textEditingController =>
+      widget.textEditingController ?? TextEditingController();
   AnimationController _animationController;
 
   // SearchContainer height.
