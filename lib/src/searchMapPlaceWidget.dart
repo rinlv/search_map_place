@@ -5,6 +5,7 @@ class SearchMapPlaceWidget extends StatefulWidget {
     @required this.apiKey,
     this.placeholder = 'Search',
     this.icon = Icons.search,
+    this.prefixIcon,
     this.hasClearButton = true,
     this.clearIcon = Icons.clear,
     this.iconColor = Colors.blue,
@@ -17,7 +18,12 @@ class SearchMapPlaceWidget extends StatefulWidget {
     this.placeType,
     this.darkMode = false,
     this.key,
-  })  : assert((location == null && radius == null) || (location != null && radius != null)),
+    this.decoration,
+    this.contentPadding,
+    this.lightTextColor,
+    this.darkTextColor,
+  })  : assert((location == null && radius == null) ||
+            (location != null && radius != null)),
         super(key: key);
 
   final Key key;
@@ -72,15 +78,33 @@ class SearchMapPlaceWidget extends StatefulWidget {
   /// Enables Dark Mode when set to `true`. Default value is `false`.
   final bool darkMode;
 
+  /// The BoxDecoration of search box
+  final BoxDecoration decoration;
+
+  /// The contentPadding of search box
+  final EdgeInsets contentPadding;
+
+  /// The prefixIcon to show in the search box
+  final IconData prefixIcon;
+
+  /// The color of the text to show in the search box
+  final Color lightTextColor;
+
+  /// The color of the text to show in the search box
+  final Color darkTextColor;
+
   @override
   _SearchMapPlaceWidgetState createState() => _SearchMapPlaceWidgetState();
 }
 
-class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget> with TickerProviderStateMixin {
+class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget>
+    with TickerProviderStateMixin {
   TextEditingController _textEditingController = TextEditingController();
   AnimationController _animationController;
+
   // SearchContainer height.
   Animation _containerHeight;
+
   // Place options opacity.
   Animation _listOpacity;
 
@@ -96,9 +120,17 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget> with Ticker
   CrossFadeState _crossFadeState;
 
   @override
+  void setState(fn) {
+    if (mounted) {
+      super.setState(fn);
+    }
+  }
+
+  @override
   void initState() {
     geocode = Geocoding(apiKey: widget.apiKey, language: widget.language);
-    _animationController = AnimationController(vsync: this, duration: Duration(milliseconds: 500));
+    _animationController =
+        AnimationController(vsync: this, duration: Duration(milliseconds: 500));
     _containerHeight = Tween<double>(begin: 55, end: 364).animate(
       CurvedAnimation(
         curve: Interval(0.0, 0.5, curve: Curves.easeInOut),
@@ -148,21 +180,26 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget> with Ticker
         builder: (context, _) {
           return Container(
             height: _containerHeight.value,
-            decoration: _containerDecoration(),
+            decoration: widget.decoration ?? _containerDecoration(),
             child: Column(
               children: <Widget>[
                 Padding(
-                  padding: const EdgeInsets.only(left: 12.0, right: 12.0, top: 4),
+                  padding:
+                      const EdgeInsets.only(left: 12.0, right: 12.0, top: 4),
                   child: child,
                 ),
                 if (_placePredictions.length > 0)
-                  Opacity(
-                    opacity: _listOpacity.value,
-                    child: Column(
-                      children: <Widget>[
-                        for (var prediction in _placePredictions)
-                          _placeOption(Place.fromJSON(prediction, geocode)),
-                      ],
+                  Expanded(
+                    child: Opacity(
+                      opacity: _listOpacity.value,
+                      child: ListView.builder(
+                        itemBuilder: (ctx, index) => _placeOption(
+                            Place.fromJSON(_placePredictions[index], geocode)),
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        physics: BouncingScrollPhysics(),
+                        itemCount: _placePredictions?.length ?? 0,
+                      ),
                     ),
                   ),
               ],
@@ -175,6 +212,11 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget> with Ticker
     return Center(
       child: Row(
         children: <Widget>[
+          if (!widget.hasClearButton)
+            Padding(
+              child: Icon(widget.prefixIcon, color: widget.iconColor, size: 24),
+              padding: EdgeInsets.only(right: 8),
+            ),
           Expanded(
             child: TextField(
               decoration: _inputStyle(),
@@ -189,11 +231,12 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget> with Ticker
               ),
             ),
           ),
-          Container(width: 15),
+          SizedBox(width: 15),
           if (widget.hasClearButton)
             GestureDetector(
               onTap: () {
-                if (_crossFadeState == CrossFadeState.showSecond) _textEditingController.clear();
+                if (_crossFadeState == CrossFadeState.showSecond)
+                  _textEditingController.clear();
               },
               // child: Icon(_inputIcon, color: this.widget.iconColor),
               child: AnimatedCrossFade(
@@ -217,10 +260,14 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget> with Ticker
       onPressed: () => _selectPlace(prediction: prediction),
       child: ListTile(
         title: Text(
-          place.length < 45 ? "$place" : "${place.replaceRange(45, place.length, "")} ...",
+          place.length < 45
+              ? "$place"
+              : "${place.replaceRange(45, place.length, "")} ...",
           style: TextStyle(
             fontSize: MediaQuery.of(context).size.width * 0.04,
-            color: widget.darkMode ? Colors.grey[100] : Colors.grey[850],
+            color: widget.darkMode
+                ? widget.darkTextColor ?? Colors.grey[100]
+                : widget.lightTextColor ?? Colors.grey[850],
           ),
           maxLines: 1,
         ),
@@ -241,16 +288,22 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget> with Ticker
       border: InputBorder.none,
       contentPadding: EdgeInsets.symmetric(horizontal: 0.0, vertical: 0.0),
       hintStyle: TextStyle(
-        color: widget.darkMode ? Colors.grey[100] : Colors.grey[850],
+        color: widget.darkMode
+            ? widget.darkTextColor ?? Colors.grey[100]
+            : widget.lightTextColor ?? Colors.grey[850],
       ),
     );
   }
 
   BoxDecoration _containerDecoration() {
     return BoxDecoration(
-      color: widget.darkMode ? Colors.grey[800] : Colors.white,
+      color: widget.darkMode
+          ? widget.darkTextColor ?? Colors.grey[800]
+          : Colors.white,
       borderRadius: BorderRadius.all(Radius.circular(6.0)),
-      boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20, spreadRadius: 10)],
+      boxShadow: [
+        BoxShadow(color: Colors.black12, blurRadius: 20, spreadRadius: 10)
+      ],
     );
   }
 
@@ -297,7 +350,8 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget> with Ticker
     String url =
         "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=${widget.apiKey}&language=${widget.language}";
     if (widget.location != null && widget.radius != null) {
-      url += "&location=${widget.location.latitude},${widget.location.longitude}&radius=${widget.radius}";
+      url +=
+          "&location=${widget.location.latitude},${widget.location.longitude}&radius=${widget.radius}";
       if (widget.strictBounds) {
         url += "&strictbounds";
       }
@@ -312,7 +366,8 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget> with Ticker
     if (json["error_message"] != null) {
       var error = json["error_message"];
       if (error == "This API project is not authorized to use this API.")
-        error += " Make sure the Places API is activated on your Google Cloud Platform";
+        error +=
+            " Make sure the Places API is activated on your Google Cloud Platform";
       throw Exception(error);
     } else {
       final predictions = json["predictions"];
@@ -342,7 +397,8 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget> with Ticker
 
   /// Closes the expanded search box with predictions
   void _closeSearch() async {
-    if (!_animationController.isDismissed) await _animationController.animateTo(0.5);
+    if (!_animationController.isDismissed)
+      await _animationController.animateTo(0.5);
     _fn.unfocus();
     setState(() {
       _placePredictions = [];
