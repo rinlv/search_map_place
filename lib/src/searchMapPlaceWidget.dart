@@ -20,8 +20,10 @@ class SearchMapPlaceWidget extends StatefulWidget {
     this.key,
     this.decoration,
     this.contentPadding,
-    this.lightTextColor,
-    this.darkTextColor,
+    this.beginHeight = 56,
+    this.endHeight = 364,
+    this.textStyle,
+    this.hintStyle,
   })  : assert((location == null && radius == null) ||
             (location != null && radius != null)),
         super(key: key);
@@ -87,11 +89,17 @@ class SearchMapPlaceWidget extends StatefulWidget {
   /// The prefixIcon to show in the search box
   final IconData prefixIcon;
 
-  /// The color of the text to show in the search box
-  final Color lightTextColor;
+  /// The begin height search box
+  final double beginHeight;
 
-  /// The color of the text to show in the search box
-  final Color darkTextColor;
+  /// The end height search box
+  final double endHeight;
+
+  /// The text style of search box
+  final TextStyle textStyle;
+
+  /// The hint style of search box
+  final TextStyle hintStyle;
 
   @override
   _SearchMapPlaceWidgetState createState() => _SearchMapPlaceWidgetState();
@@ -131,7 +139,8 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget>
     geocode = Geocoding(apiKey: widget.apiKey, language: widget.language);
     _animationController =
         AnimationController(vsync: this, duration: Duration(milliseconds: 500));
-    _containerHeight = Tween<double>(begin: 55, end: 364).animate(
+    _containerHeight =
+        Tween<double>(begin: widget.beginHeight, end: widget.endHeight).animate(
       CurvedAnimation(
         curve: Interval(0.0, 0.5, curve: Curves.easeInOut),
         parent: _animationController,
@@ -184,8 +193,7 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget>
             child: Column(
               children: <Widget>[
                 Padding(
-                  padding:
-                      const EdgeInsets.only(left: 12.0, right: 12.0, top: 4),
+                  padding: const EdgeInsets.only(left: 12.0, right: 12.0),
                   child: child,
                 ),
                 if (_placePredictions.length > 0)
@@ -209,46 +217,42 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget>
   }
 
   Widget _searchInput(BuildContext context) {
-    return Center(
-      child: Row(
-        children: <Widget>[
-          if (!widget.hasClearButton)
-            Padding(
-              child: Icon(widget.prefixIcon, color: widget.iconColor, size: 24),
-              padding: EdgeInsets.only(right: 8),
-            ),
-          Expanded(
-            child: TextField(
-              decoration: _inputStyle(),
-              controller: _textEditingController,
-              onSubmitted: (_) => _selectPlace(),
-              onEditingComplete: _selectPlace,
-              autofocus: false,
-              focusNode: _fn,
-              style: TextStyle(
-                fontSize: MediaQuery.of(context).size.width * 0.04,
-                color: widget.darkMode ? Colors.grey[100] : Colors.grey[850],
-              ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: <Widget>[
+        if (!widget.hasClearButton)
+          Padding(
+            child: Icon(widget.prefixIcon, color: widget.iconColor, size: 24),
+            padding: EdgeInsets.only(right: 8),
+          ),
+        Expanded(
+          child: TextField(
+            decoration: _inputStyle(),
+            controller: _textEditingController,
+            onSubmitted: (_) => _selectPlace(),
+            onEditingComplete: _selectPlace,
+            autofocus: false,
+            focusNode: _fn,
+            style: widget.textStyle,
+          ),
+        ),
+        SizedBox(width: 15),
+        if (widget.hasClearButton)
+          GestureDetector(
+            onTap: () {
+              if (_crossFadeState == CrossFadeState.showSecond)
+                _textEditingController.clear();
+            },
+            // child: Icon(_inputIcon, color: this.widget.iconColor),
+            child: AnimatedCrossFade(
+              crossFadeState: _crossFadeState,
+              duration: Duration(milliseconds: 300),
+              firstChild: Icon(widget.icon, color: widget.iconColor),
+              secondChild: Icon(Icons.clear, color: widget.iconColor),
             ),
           ),
-          SizedBox(width: 15),
-          if (widget.hasClearButton)
-            GestureDetector(
-              onTap: () {
-                if (_crossFadeState == CrossFadeState.showSecond)
-                  _textEditingController.clear();
-              },
-              // child: Icon(_inputIcon, color: this.widget.iconColor),
-              child: AnimatedCrossFade(
-                crossFadeState: _crossFadeState,
-                duration: Duration(milliseconds: 300),
-                firstChild: Icon(widget.icon, color: widget.iconColor),
-                secondChild: Icon(Icons.clear, color: widget.iconColor),
-              ),
-            ),
-          if (!widget.hasClearButton) Icon(widget.icon, color: widget.iconColor)
-        ],
-      ),
+        if (!widget.hasClearButton) Icon(widget.icon, color: widget.iconColor)
+      ],
     );
   }
 
@@ -263,12 +267,7 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget>
           place.length < 45
               ? "$place"
               : "${place.replaceRange(45, place.length, "")} ...",
-          style: TextStyle(
-            fontSize: MediaQuery.of(context).size.width * 0.04,
-            color: widget.darkMode
-                ? widget.darkTextColor ?? Colors.grey[100]
-                : widget.lightTextColor ?? Colors.grey[850],
-          ),
+          style: widget.textStyle,
           maxLines: 1,
         ),
         contentPadding: EdgeInsets.symmetric(
@@ -287,19 +286,13 @@ class _SearchMapPlaceWidgetState extends State<SearchMapPlaceWidget>
       hintText: this.widget.placeholder,
       border: InputBorder.none,
       contentPadding: EdgeInsets.symmetric(horizontal: 0.0, vertical: 0.0),
-      hintStyle: TextStyle(
-        color: widget.darkMode
-            ? widget.darkTextColor ?? Colors.grey[100]
-            : widget.lightTextColor ?? Colors.grey[850],
-      ),
+      hintStyle: widget.hintStyle,
     );
   }
 
   BoxDecoration _containerDecoration() {
     return BoxDecoration(
-      color: widget.darkMode
-          ? widget.darkTextColor ?? Colors.grey[800]
-          : Colors.white,
+      color: widget.darkMode ? Colors.grey[800] : Colors.white,
       borderRadius: BorderRadius.all(Radius.circular(6.0)),
       boxShadow: [
         BoxShadow(color: Colors.black12, blurRadius: 20, spreadRadius: 10)
